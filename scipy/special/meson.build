@@ -28,10 +28,15 @@ cdflib_lib = static_library('cdflib',
 
 ufuncs_cpp_args = ['-DSP_SPECFUN_ERROR']
 
+# xsf-rust (Rust port of xsf) behind a C ABI, see xsf_capi/
+add_languages('rust', native: false, required: true)
+xsf_capi_lib = import('rust').workspace().package('xsf-capi').library()
+xsf_capi_dep = declare_dependency(link_with: xsf_capi_lib)
+
 py3.extension_module('_special_ufuncs',
   ['_special_ufuncs.cpp', '_special_ufuncs_docs.cpp', 'sf_error.cc'],
   include_directories: ['..', '../_lib', '../_build_utils/src'],
-  dependencies: [boost_math_dep, xsf_dep, np_dep, lapack_dep],
+  dependencies: [boost_math_dep, xsf_dep, np_dep, lapack_dep, xsf_capi_dep],
   link_args: version_link_args,
   cpp_args: ['-DBOOST_MATH_STANDALONE=1'] + ufuncs_cpp_args,
   install: true,

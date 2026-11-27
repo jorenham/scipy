@@ -70,6 +70,42 @@
 #include "mathieu.h"
 #include "sf_error.h"
 
+// xsf-rust behind a C ABI, see xsf_capi/
+extern "C" {
+struct xsf_capi_complex { double re, im; };
+double xsf_hyp2f1(double, double, double, double, int *);
+xsf_capi_complex xsf_hyp2f1_c(double, double, double, xsf_capi_complex, int *);
+xsf_capi_complex xsf_hyp1f1_c(double, double, xsf_capi_complex, int *);
+double xsf_gammainc(double, double, int *);
+double xsf_pdtr(double, double, int *);
+double xsf_chdtr(double, double, int *);
+}
+
+namespace {
+template <class F, class... Args>
+auto rs_call(const char *name, F f, Args... args) {
+    int e = 0;
+    auto r = f(args..., &e);
+    if (e != 0) {
+        xsf::set_error(name, static_cast<sf_error_t>(e), nullptr);
+    }
+    return r;
+}
+
+double rs_hyp2f1(double a, double b, double c, double x) { return rs_call("hyp2f1", xsf_hyp2f1, a, b, c, x); }
+std::complex<double> rs_hyp2f1_c(double a, double b, double c, std::complex<double> z) {
+    auto r = rs_call("hyp2f1", xsf_hyp2f1_c, a, b, c, xsf_capi_complex{z.real(), z.imag()});
+    return {r.re, r.im};
+}
+std::complex<double> rs_hyp1f1_c(double a, double b, std::complex<double> z) {
+    auto r = rs_call("hyp1f1", xsf_hyp1f1_c, a, b, xsf_capi_complex{z.real(), z.imag()});
+    return {r.re, r.im};
+}
+double rs_gammainc(double a, double x) { return rs_call("gammainc", xsf_gammainc, a, x); }
+double rs_pdtr(double k, double m) { return rs_call("pdtr", xsf_pdtr, k, m); }
+double rs_chdtr(double df, double x) { return rs_call("chdtr", xsf_chdtr, df, x); }
+} // namespace
+
 extern const char *_beta_pdf_doc;
 extern const char *_binom_cdf_doc;
 extern const char *_binom_isf_doc;
@@ -1139,7 +1175,7 @@ _special_ufuncs_module_exec(PyObject *module)
     PyModule_AddObjectRef(module, "cbrt", cbrt);
 
     PyObject *chdtr = xsf::numpy::ufunc(
-        {static_cast<xsf::numpy::ff_f>(xsf::chdtr), static_cast<xsf::numpy::dd_d>(xsf::chdtr)}, "chdtr",
+        {static_cast<xsf::numpy::ff_f>(xsf::chdtr), static_cast<xsf::numpy::dd_d>(rs_chdtr)}, "chdtr",
         chdtr_doc);
     PyModule_AddObjectRef(module, "chdtr", chdtr);
 
@@ -1456,7 +1492,7 @@ _special_ufuncs_module_exec(PyObject *module)
     PyModule_AddObjectRef(module, "owens_t", owens_t);
 
     PyObject *pdtr = xsf::numpy::ufunc(
-        {static_cast<xsf::numpy::ff_f>(xsf::pdtr), static_cast<xsf::numpy::dd_d>(xsf::pdtr)}, "pdtr", pdtr_doc);
+        {static_cast<xsf::numpy::ff_f>(xsf::pdtr), static_cast<xsf::numpy::dd_d>(rs_pdtr)}, "pdtr", pdtr_doc);
     PyModule_AddObjectRef(module, "pdtr", pdtr);
 
     PyObject *pdtrc =
@@ -1499,7 +1535,7 @@ _special_ufuncs_module_exec(PyObject *module)
     PyModule_AddObjectRef(module, "gamma", gamma);
 
     PyObject *gammainc =
-        xsf::numpy::ufunc({static_cast<xsf::numpy::ff_f>(xsf::gammainc), static_cast<xsf::numpy::dd_d>(xsf::gammainc)},
+        xsf::numpy::ufunc({static_cast<xsf::numpy::ff_f>(xsf::gammainc), static_cast<xsf::numpy::dd_d>(rs_gammainc)},
                           "gammainc", gammainc_doc);
     PyModule_AddObjectRef(module, "gammainc", gammainc);
 
@@ -1548,13 +1584,13 @@ _special_ufuncs_module_exec(PyObject *module)
 
     PyObject *hyp1f1 = xsf::numpy::ufunc(
         {static_cast<xsf::numpy::fff_f>(hyp1f1_float), static_cast<xsf::numpy::ddd_d>(hyp1f1_double),
-         static_cast<xsf::numpy::ffF_F>(xsf::hyp1f1), static_cast<xsf::numpy::ddD_D>(xsf::hyp1f1)},
+         static_cast<xsf::numpy::ffF_F>(xsf::hyp1f1), static_cast<xsf::numpy::ddD_D>(rs_hyp1f1_c)},
         "hyp1f1", hyp1f1_doc);
     PyModule_AddObjectRef(module, "hyp1f1", hyp1f1);
 
     PyObject *hyp2f1 =
-        xsf::numpy::ufunc({static_cast<xsf::numpy::ffff_f>(xsf::hyp2f1), static_cast<xsf::numpy::dddd_d>(xsf::hyp2f1),
-                           static_cast<xsf::numpy::fffF_F>(xsf::hyp2f1), static_cast<xsf::numpy::dddD_D>(xsf::hyp2f1)},
+        xsf::numpy::ufunc({static_cast<xsf::numpy::ffff_f>(xsf::hyp2f1), static_cast<xsf::numpy::dddd_d>(rs_hyp2f1),
+                           static_cast<xsf::numpy::fffF_F>(xsf::hyp2f1), static_cast<xsf::numpy::dddD_D>(rs_hyp2f1_c)},
                           "hyp2f1", hyp2f1_doc);
     PyModule_AddObjectRef(module, "hyp2f1", hyp2f1);
 

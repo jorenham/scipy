@@ -314,6 +314,7 @@ blas-devel = "*"
 # e.g. when using Intel oneAPI
 [feature.build-deps-compilers]
 dependencies.pythran = "*"  # https://github.com/conda-forge/pythran-feedstock/issues/77
+dependencies.rust = "*"
 # minimally-activated gxx and clangxx on linux and osx respectively
 target.unix.dependencies.cxx-compiler = "2.*"
 target.linux.activation.env = {
@@ -334,7 +335,7 @@ target.win-64.dependencies.clang-cl_win-64 = "*"
 ccache = "*"
 pkg-config = "*"
 ninja = "*"
-meson = "*"
+meson = ">=1.12.1"  # Rust workspaces
 meson-python = "*"
 cython = "*"
 pybind11 = "*"
