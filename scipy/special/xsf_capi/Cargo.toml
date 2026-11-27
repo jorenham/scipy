@@ -1,0 +1,13 @@
+[package]
+name = "xsf-capi"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "C ABI over xsf-rust for a handful of scalar scipy.special kernels (demo)"
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+xsf = "0.7.0"
+num-complex = "0.4.6"
